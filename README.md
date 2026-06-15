@@ -12,37 +12,62 @@ An autonomous software development system powered by AI agents. Agents pick up t
 
 ---
 
-## Installation
-
-**Mac / Linux**
+## Setup — Mac / Linux
 
 ```bash
-git clone https://github.com/kennydead/claude-agent-farm-dist.git
-cd claude-agent-farm-dist
-./start.sh
-```
-
-**Windows**
-
-Open Windows Terminal → Ubuntu tab:
-
-```bash
-git clone https://github.com/kennydead/claude-agent-farm-dist.git
-cd claude-agent-farm-dist
+git clone https://github.com/kennydead/claude-agent-farm-dist.git ~/farm
+cd ~/farm
 bash start.sh
 ```
 
+1. Open **http://localhost:5174** in your browser and complete the setup wizard
+2. Authenticate Claude (one-time):
+   ```bash
+   bash ~/farm/setup.sh
+   ```
+3. Go to the dashboard → Agents page and spawn your agents
+
 ---
 
-## First-time setup
+## Setup — Windows
 
-1. After running `start.sh`, open **http://localhost:5174** in your browser
-2. The setup wizard will guide you through connecting your GitHub account and creating your first project
-3. Authenticate Claude by running this once in your terminal:
-   ```bash
-   docker compose run --rm --entrypoint="" coder claude auth login
-   ```
-4. Go to the dashboard → Agents page and spawn your agents
+**Step 1 — Install the prerequisites**
+
+- Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and enable the WSL2 backend when prompted
+- Install Windows Terminal:
+  ```
+  winget install Microsoft.WindowsTerminal
+  ```
+
+**Step 2 — Open a Linux terminal**
+
+Open **Windows Terminal** and click the dropdown arrow next to the `+` tab — select **Ubuntu**.
+
+All commands below must be run inside this Ubuntu tab.
+
+**Step 3 — Clone and start**
+
+```bash
+git clone https://github.com/kennydead/claude-agent-farm-dist.git ~/farm
+cd ~/farm
+bash start.sh
+```
+
+**Step 4 — Complete setup in the browser**
+
+Open **http://localhost:5174** and follow the setup wizard.
+
+**Step 5 — Authenticate Claude**
+
+```bash
+bash ~/farm/setup.sh
+```
+
+A browser window will open. Log in with your claude.ai account.
+
+**Step 6 — Spawn agents**
+
+Go to the dashboard → Agents page and spawn your agents.
 
 ---
 
@@ -51,8 +76,9 @@ bash start.sh
 When a new version is available:
 
 ```bash
+cd ~/farm
 docker compose pull
-docker compose up -d
+bash start.sh
 ```
 
 ---
@@ -64,5 +90,5 @@ docker compose up -d
 docker compose down
 
 # Start again
-./start.sh
+cd ~/farm && bash start.sh
 ```
