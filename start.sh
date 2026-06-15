@@ -4,6 +4,7 @@ set -e
 
 mkdir -p logs
 touch .env
+touch config.yml
 
 echo "Pulling latest images..."
 docker pull ghcr.io/kennydead/claude-agent-farm/agent:latest
