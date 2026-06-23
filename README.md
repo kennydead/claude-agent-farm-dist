@@ -7,7 +7,7 @@ An autonomous software development system powered by AI agents. Agents pick up t
 ## Requirements
 
 - **Docker Desktop** — [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/)
-- **A claude.ai account** (Max plan recommended)
+- **A claude.ai account** (Pro or Max plan — Max recommended for heavy use)
 - A GitHub token provided by your Claude Agent Farm license
 
 ---
