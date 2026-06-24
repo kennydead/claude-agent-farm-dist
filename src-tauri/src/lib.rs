@@ -95,24 +95,43 @@ fn start_claude_auth(app: AppHandle) -> Result<String, String> {
         .map_err(|e| format!("Failed to start auth: {e}"))?;
 
     let stdout = child.stdout.take().ok_or("No stdout")?;
+    let stderr = child.stderr.take().ok_or("No stderr")?;
     let stdin = child.stdin.take().ok_or("No stdin")?;
 
-    // Read lines until we find the URL
-    let reader = BufReader::new(stdout);
+    // Read both streams in a background thread — keep pipes open so the process
+    // doesn't get SIGPIPE when it writes the success message after code submission.
+    // The channel carries every line; we look for the URL from the main thread.
+    let (tx, rx) = std::sync::mpsc::channel::<String>();
+    let tx2 = tx.clone();
+
+    std::thread::spawn(move || {
+        for line in BufReader::new(stdout).lines().flatten() { let _ = tx.send(line); }
+    });
+    std::thread::spawn(move || {
+        for line in BufReader::new(stderr).lines().flatten() { let _ = tx2.send(line); }
+    });
+
+    // Wait up to 30 s for a URL to appear on either stream
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
     let mut url = String::new();
-    for line in reader.lines().take(30) {
-        let line = line.map_err(|e| e.to_string())?;
-        if let Some(u) = line.split_whitespace().find(|s| s.starts_with("https://")) {
-            url = u.to_string();
-            break;
+    while std::time::Instant::now() < deadline {
+        match rx.recv_timeout(std::time::Duration::from_millis(200)) {
+            Ok(line) => {
+                if let Some(u) = line.split_whitespace().find(|s| s.starts_with("https://")) {
+                    url = u.to_string();
+                    break;
+                }
+            }
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+            Err(_) => continue,
         }
     }
 
     if url.is_empty() {
+        let _ = child.kill();
         return Err("No login URL found. Try running setup.sh manually.".to_string());
     }
 
-    // Store session so we can submit the code later
     let state = app.state::<AuthState>();
     *state.lock().unwrap() = Some(AuthSession { stdin, child });
 
@@ -127,11 +146,31 @@ fn complete_claude_auth(app: AppHandle, code: String) -> Result<(), String> {
 
     writeln!(session.stdin, "{}", code.trim()).map_err(|e| e.to_string())?;
     session.stdin.flush().map_err(|e| e.to_string())?;
+    drop(session.stdin.by_ref()); // signal EOF to the process
 
-    let status = session.child.wait().map_err(|e| e.to_string())?;
+    // Wait for process to exit — stdout/stderr are still being drained by the threads above
+    let _ = session.child.wait();
     *lock = None;
+    drop(lock);
 
-    if status.success() { Ok(()) } else { Err("Authentication failed. Please try again.".to_string()) }
+    // Verify auth actually succeeded rather than trusting the exit code
+    let docker = docker_bin();
+    let out = std::process::Command::new(&docker)
+        .args([
+            "run", "--rm", "--platform", "linux/amd64",
+            "--entrypoint", "",
+            "-v", "claudeagentfarm_claude-home:/home/agent",
+            AGENT_IMAGE, "claude", "auth", "status", "--json",
+        ])
+        .env("PATH", augmented_path())
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if String::from_utf8_lossy(&out.stdout).contains("\"loggedIn\": true") {
+        Ok(())
+    } else {
+        Err("Authentication did not complete. Please try again.".to_string())
+    }
 }
 
 #[tauri::command]
