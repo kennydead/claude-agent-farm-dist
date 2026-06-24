@@ -5,21 +5,20 @@ use tauri::{
 };
 
 #[tauri::command]
-fn run_command(program: String, args: Vec<String>) -> Result<String, String> {
-    let output = std::process::Command::new(&program)
-        .args(&args)
-        .output()
-        .map_err(|e| format!("Failed to run {program}: {e}"))?;
-    if output.status.success() {
-        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
-    } else {
-        Err(String::from_utf8_lossy(&output.stderr).into_owned())
-    }
-}
-
-#[tauri::command]
-fn run_command_stream(program: String, args: Vec<String>) -> Result<String, String> {
-    run_command(program, args)
+async fn run_command(program: String, args: Vec<String>) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let output = std::process::Command::new(&program)
+            .args(&args)
+            .output()
+            .map_err(|e| format!("Failed to run {program}: {e}"))?;
+        if output.status.success() {
+            Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+        } else {
+            Err(String::from_utf8_lossy(&output.stderr).into_owned())
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -69,7 +68,7 @@ pub fn run() {
                 api.prevent_close();
             }
         })
-        .invoke_handler(tauri::generate_handler![run_command, run_command_stream])
+        .invoke_handler(tauri::generate_handler![run_command])
         .run(tauri::generate_context!())
         .expect("error while running tauri application")
 }

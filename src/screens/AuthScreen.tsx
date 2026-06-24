@@ -37,6 +37,7 @@ export default function AuthScreen({ onAuthenticated }: Props) {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (import.meta.env.DEV) { setState("needed"); return; }
     checkAuth().then((ok) => {
       if (ok) onAuthenticated();
       else setState("needed");
@@ -46,6 +47,10 @@ export default function AuthScreen({ onAuthenticated }: Props) {
   async function startLogin() {
     setState("waiting-code");
     setError("");
+    if (import.meta.env.DEV) {
+      setLoginUrl("https://claude.ai/oauth/authorize?dev=true");
+      return;
+    }
     // Run claude auth login and capture the URL from its output
     try {
       const out = await invoke<string>("run_command", {
@@ -67,6 +72,7 @@ export default function AuthScreen({ onAuthenticated }: Props) {
 
   async function submitCode() {
     if (!code.trim()) return;
+    if (import.meta.env.DEV) { onAuthenticated(); return; }
     try {
       await invoke<string>("run_command", {
         program: "docker",

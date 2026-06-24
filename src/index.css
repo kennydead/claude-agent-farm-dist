@@ -1,4 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 :root {
+
   --accent:         #4F8EF7;
   --accent-end:     #7C5CFC;
   --accent-glow:    rgba(79, 142, 247, 0.25);
@@ -30,5 +33,3 @@ html, body, #root {
   -webkit-font-smoothing: antialiased;
   user-select: none;
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');

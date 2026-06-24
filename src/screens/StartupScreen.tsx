@@ -42,6 +42,16 @@ export default function StartupScreen({ licenseKey, onReady }: Props) {
     const set = (id: string, state: Step["state"]) =>
       setSteps((prev) => setStepState(prev, id, state));
 
+    if (import.meta.env.DEV) {
+      for (const step of INITIAL_STEPS) {
+        set(step.id, "active");
+        await new Promise((r) => setTimeout(r, 700));
+        set(step.id, "done");
+      }
+      setTimeout(onReady, 600);
+      return;
+    }
+
     try {
       // Step: docker
       set("docker", "active");

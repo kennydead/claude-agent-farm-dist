@@ -18,6 +18,11 @@ export default function LicenseScreen({ onVerified }: Props) {
     if (!key.trim()) return;
     setLoading(true);
     setError("");
+    // In dev mode, any non-empty key passes
+    if (import.meta.env.DEV) {
+      setTimeout(() => onVerified(key.trim()), 500);
+      return;
+    }
     try {
       const res = await fetch(`${LICENSE_SERVER}/validate`, {
         method: "POST",
