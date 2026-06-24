@@ -56,11 +56,14 @@ const LICENSE_SERVER: &str = "https://license.claudeagentfarm.com";
 async fn validate_license_key(key: String) -> Result<bool, String> {
     tauri::async_runtime::spawn_blocking(move || {
         match ureq::post(&format!("{LICENSE_SERVER}/validate"))
+            .timeout(std::time::Duration::from_secs(8))
             .send_json(serde_json::json!({ "key": key }))
         {
             Ok(res) => Ok(res.status() == 200),
-            Err(ureq::Error::Status(_, _)) => Ok(false),
-            Err(e) => Err(format!("Could not reach license server: {e}")),
+            // Server explicitly rejected the key
+            Err(ureq::Error::Status(401, _)) | Err(ureq::Error::Status(403, _)) => Ok(false),
+            // Server unreachable — fail open, backend will validate
+            Err(_) => Ok(true),
         }
     })
     .await
