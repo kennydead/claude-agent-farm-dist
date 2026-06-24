@@ -50,7 +50,7 @@ fn check_license() -> bool {
     farm_dir().join("logs").join("license_key.txt").exists()
 }
 
-const LICENSE_SERVER: &str = "https://license.claudeagentfarm.com";
+const LICENSE_SERVER: &str = "https://oywppqdqfcypawrthfox.supabase.co/functions/v1";
 
 #[tauri::command]
 async fn validate_license_key(key: String) -> Result<bool, String> {
