@@ -3,7 +3,18 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Manager, WindowEvent,
 };
+use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
+use std::sync::Mutex;
+
+const AGENT_IMAGE: &str = "ghcr.io/kennydead/claude-agent-farm/agent:latest";
+
+struct AuthSession {
+    stdin: std::process::ChildStdin,
+    child: std::process::Child,
+}
+
+type AuthState = Mutex<Option<AuthSession>>;
 
 fn farm_dir() -> PathBuf {
     let home = std::env::var("HOME")
@@ -43,6 +54,84 @@ fn python_bin() -> String {
 #[tauri::command]
 fn get_farm_dir() -> String {
     farm_dir().to_string_lossy().into_owned()
+}
+
+#[tauri::command]
+async fn check_claude_auth() -> bool {
+    let docker = docker_bin();
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        std::process::Command::new(&docker)
+            .args([
+                "run", "--rm", "--platform", "linux/amd64",
+                "--entrypoint", "",
+                "-v", "claudeagentfarm_claude-home:/home/agent",
+                AGENT_IMAGE, "claude", "auth", "status", "--json",
+            ])
+            .env("PATH", augmented_path())
+            .output()
+    })
+    .await;
+    match result {
+        Ok(Ok(out)) => String::from_utf8_lossy(&out.stdout).contains("\"loggedIn\": true"),
+        _ => false,
+    }
+}
+
+#[tauri::command]
+fn start_claude_auth(app: AppHandle) -> Result<String, String> {
+    let docker = docker_bin();
+    let mut child = std::process::Command::new(&docker)
+        .args([
+            "run", "--rm", "-i", "--platform", "linux/amd64",
+            "--entrypoint", "",
+            "-v", "claudeagentfarm_claude-home:/home/agent",
+            AGENT_IMAGE, "claude", "auth", "login",
+        ])
+        .env("PATH", augmented_path())
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("Failed to start auth: {e}"))?;
+
+    let stdout = child.stdout.take().ok_or("No stdout")?;
+    let stdin = child.stdin.take().ok_or("No stdin")?;
+
+    // Read lines until we find the URL
+    let reader = BufReader::new(stdout);
+    let mut url = String::new();
+    for line in reader.lines().take(30) {
+        let line = line.map_err(|e| e.to_string())?;
+        if let Some(u) = line.split_whitespace().find(|s| s.starts_with("https://")) {
+            url = u.to_string();
+            break;
+        }
+    }
+
+    if url.is_empty() {
+        return Err("No login URL found. Try running setup.sh manually.".to_string());
+    }
+
+    // Store session so we can submit the code later
+    let state = app.state::<AuthState>();
+    *state.lock().unwrap() = Some(AuthSession { stdin, child });
+
+    Ok(url)
+}
+
+#[tauri::command]
+fn complete_claude_auth(app: AppHandle, code: String) -> Result<(), String> {
+    let state = app.state::<AuthState>();
+    let mut lock = state.lock().unwrap();
+    let session = lock.as_mut().ok_or("No active auth session")?;
+
+    writeln!(session.stdin, "{}", code.trim()).map_err(|e| e.to_string())?;
+    session.stdin.flush().map_err(|e| e.to_string())?;
+
+    let status = session.child.wait().map_err(|e| e.to_string())?;
+    *lock = None;
+
+    if status.success() { Ok(()) } else { Err("Authentication failed. Please try again.".to_string()) }
 }
 
 #[tauri::command]
@@ -161,6 +250,7 @@ fn run_detached(program: String, args: Vec<String>) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(AuthState::new(None))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
@@ -242,6 +332,9 @@ pub fn run() {
             run_command,
             run_docker_compose,
             run_detached,
+            check_claude_auth,
+            start_claude_auth,
+            complete_claude_auth,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application")
