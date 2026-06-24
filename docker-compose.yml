@@ -21,12 +21,16 @@ services:
     platform: linux/amd64
     ports:
       - "8090:8090"
+    env_file:
+      - path: .env
+        required: false
     environment:
       DASHBOARD_DATABASE_URL: postgresql+asyncpg://farm:farm@dashboard-db:5432/farm
       DASHBOARD_SECRET_KEY: ${DASHBOARD_SECRET_KEY:-change-this-before-use}
       DASHBOARD_CORS_ORIGINS: http://localhost:5174
       COMPOSE_PROJECT_DIR: ${PWD}
       LICENSE_SERVER_URL: https://oywppqdqfcypawrthfox.supabase.co/functions/v1/validate-license
+      DIAGNOSTICS_SERVER_URL: https://oywppqdqfcypawrthfox.supabase.co/functions/v1/receive-diagnostic
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./config.yml:/farm/config.yml:ro
