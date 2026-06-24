@@ -59,7 +59,11 @@ async fn validate_license_key(key: String) -> Result<bool, String> {
             .timeout(std::time::Duration::from_secs(8))
             .send_json(serde_json::json!({ "key": key }))
         {
-            Ok(res) => Ok(res.status() == 200),
+            Ok(res) => {
+                let body: serde_json::Value = res.into_json()
+                    .unwrap_or(serde_json::json!({ "valid": false }));
+                Ok(body["valid"].as_bool().unwrap_or(false))
+            }
             Err(ureq::Error::Status(_, _)) => Ok(false),
             Err(e) => Err(format!("Could not verify license key. Check your internet connection.\n\nDetails: {e}")),
         }
