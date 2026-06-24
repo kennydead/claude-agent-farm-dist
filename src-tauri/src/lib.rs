@@ -50,6 +50,23 @@ fn check_license() -> bool {
     farm_dir().join("logs").join("license_key.txt").exists()
 }
 
+const LICENSE_SERVER: &str = "https://license.claudeagentfarm.com";
+
+#[tauri::command]
+async fn validate_license_key(key: String) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        match ureq::post(&format!("{LICENSE_SERVER}/validate"))
+            .send_json(serde_json::json!({ "key": key }))
+        {
+            Ok(res) => Ok(res.status() == 200),
+            Err(ureq::Error::Status(_, _)) => Ok(false),
+            Err(e) => Err(format!("Could not reach license server: {e}")),
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[tauri::command]
 fn save_license_key(key: String) -> Result<(), String> {
     let logs = farm_dir().join("logs");
@@ -214,6 +231,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_farm_dir,
             check_license,
+            validate_license_key,
             save_license_key,
             extract_resources,
             run_command,

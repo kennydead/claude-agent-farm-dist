@@ -10,13 +10,33 @@ interface Props {
 
 export default function LicenseScreen({ onVerified }: Props) {
   const [key, setKey] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function verify() {
     if (!key.trim()) return;
     setLoading(true);
-    await invoke("save_license_key", { key: key.trim() });
-    onVerified();
+    setError("");
+
+    if (import.meta.env.DEV) {
+      await invoke("save_license_key", { key: key.trim() });
+      onVerified();
+      return;
+    }
+
+    try {
+      const valid = await invoke<boolean>("validate_license_key", { key: key.trim() });
+      if (valid) {
+        await invoke("save_license_key", { key: key.trim() });
+        onVerified();
+      } else {
+        setError("Invalid license key. Please check and try again.");
+      }
+    } catch (e: any) {
+      setError(String(e));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -40,11 +60,12 @@ export default function LicenseScreen({ onVerified }: Props) {
               autoFocus
               spellCheck={false}
             />
+            {error && <p className="field-error">{error}</p>}
           </div>
         </div>
 
         <Button onClick={verify} loading={loading} disabled={!key.trim()} fullWidth>
-          Verify License
+          Continue
         </Button>
 
         <p className="screen-footnote">
