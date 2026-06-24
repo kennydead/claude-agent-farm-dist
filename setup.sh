@@ -11,7 +11,7 @@ echo ""
 echo "If it completes immediately, you are already authenticated."
 echo ""
 
-docker run --rm -it \
+docker run --rm -i \
   -v claudeagentfarm_claude-home:/home/agent \
   ghcr.io/kennydead/claude-agent-farm/agent:latest \
   claude auth login
