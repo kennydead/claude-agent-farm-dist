@@ -60,10 +60,8 @@ async fn validate_license_key(key: String) -> Result<bool, String> {
             .send_json(serde_json::json!({ "key": key }))
         {
             Ok(res) => Ok(res.status() == 200),
-            // Server explicitly rejected the key
-            Err(ureq::Error::Status(401, _)) | Err(ureq::Error::Status(403, _)) => Ok(false),
-            // Server unreachable — fail open, backend will validate
-            Err(_) => Ok(true),
+            Err(ureq::Error::Status(_, _)) => Ok(false),
+            Err(e) => Err(format!("Could not verify license key. Check your internet connection.\n\nDetails: {e}")),
         }
     })
     .await
