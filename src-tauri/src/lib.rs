@@ -10,7 +10,7 @@ use std::sync::Mutex;
 const AGENT_IMAGE: &str = "ghcr.io/kennydead/claude-agent-farm/agent:latest";
 
 struct AuthSession {
-    stdin: std::process::ChildStdin,
+    stdin: Option<std::process::ChildStdin>,
     child: std::process::Child,
 }
 
@@ -133,7 +133,7 @@ fn start_claude_auth(app: AppHandle) -> Result<String, String> {
     }
 
     let state = app.state::<AuthState>();
-    *state.lock().unwrap() = Some(AuthSession { stdin, child });
+    *state.lock().unwrap() = Some(AuthSession { stdin: Some(stdin), child });
 
     Ok(url)
 }
@@ -144,9 +144,11 @@ fn complete_claude_auth(app: AppHandle, code: String) -> Result<(), String> {
     let mut lock = state.lock().unwrap();
     let session = lock.as_mut().ok_or("No active auth session")?;
 
-    writeln!(session.stdin, "{}", code.trim()).map_err(|e| e.to_string())?;
-    session.stdin.flush().map_err(|e| e.to_string())?;
-    drop(session.stdin.by_ref()); // signal EOF to the process
+    if let Some(ref mut stdin) = session.stdin {
+        writeln!(stdin, "{}", code.trim()).map_err(|e| e.to_string())?;
+        stdin.flush().map_err(|e| e.to_string())?;
+    }
+    drop(session.stdin.take()); // close stdin → signals EOF to the process
 
     // Wait for process to exit — stdout/stderr are still being drained by the threads above
     let _ = session.child.wait();
