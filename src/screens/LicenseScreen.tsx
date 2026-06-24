@@ -1,10 +1,11 @@
 import { useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import Layout from "../components/Layout";
 import Button from "../components/Button";
 import "./Screen.css";
 
 interface Props {
-  onVerified: (key: string) => void;
+  onVerified: () => void;
 }
 
 const LICENSE_SERVER = "https://license.claudeagentfarm.com";
@@ -20,7 +21,8 @@ export default function LicenseScreen({ onVerified }: Props) {
     setError("");
     // In dev mode, any non-empty key passes
     if (import.meta.env.DEV) {
-      setTimeout(() => onVerified(key.trim()), 500);
+      await invoke("save_license_key", { key: key.trim() });
+      setTimeout(() => onVerified(), 500);
       return;
     }
     try {
@@ -30,7 +32,8 @@ export default function LicenseScreen({ onVerified }: Props) {
         body: JSON.stringify({ key: key.trim() }),
       });
       if (res.ok) {
-        onVerified(key.trim());
+        await invoke("save_license_key", { key: key.trim() });
+        onVerified();
       } else {
         setError("Invalid license key. Please check and try again.");
       }
