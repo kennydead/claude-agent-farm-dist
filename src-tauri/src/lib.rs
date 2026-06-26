@@ -7,7 +7,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-const FARM_VERSION: &str = "v0.1.1";
+const FARM_VERSION: &str = "latest";
 const IMAGE_REGISTRY: &str = "ghcr.io/kennydead/claude-agent-farm";
 
 fn agent_image() -> String {
