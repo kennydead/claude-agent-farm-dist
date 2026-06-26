@@ -390,9 +390,23 @@ pub fn run() {
             let quit  = MenuItem::with_id(app, "quit",  "Quit",            true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &stop, &reset, &quit])?;
 
+            // Load monochrome tray icon (template mode = macOS adapts to menu bar colour)
+            let tray_icon = {
+                let path = app.path().resource_dir()
+                    .map(|d| d.join("tray-icon.png"))
+                    .ok()
+                    .filter(|p| p.exists());
+                if let Some(p) = path {
+                    tauri::image::Image::from_path(p).ok()
+                } else {
+                    None
+                }
+            }.unwrap_or_else(|| app.default_window_icon().unwrap().clone());
+
             TrayIconBuilder::new()
                 .menu(&menu)
-                .icon(app.default_window_icon().unwrap().clone())
+                .icon(tray_icon)
+                .icon_as_template(true)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => {
                         if let Some(w) = app.get_webview_window("main") {
@@ -426,8 +440,20 @@ pub fn run() {
                         }
                     }
                     "quit" => {
-                        // Farm keeps running in Docker — just close the tray app
-                        app.exit(0);
+                        let app = app.clone();
+                        tauri::async_runtime::spawn(async move {
+                            let farm = farm_dir();
+                            let compose_file = farm.join("docker-compose.yml")
+                                .to_string_lossy().into_owned();
+                            let docker = docker_bin();
+                            let _ = tauri::async_runtime::spawn_blocking(move || {
+                                let _ = std::process::Command::new(&docker)
+                                    .args(["compose", "-f", &compose_file, "down"])
+                                    .env("PATH", augmented_path())
+                                    .output();
+                            }).await;
+                            app.exit(0);
+                        });
                     }
                     _ => {}
                 })
