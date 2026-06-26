@@ -416,7 +416,7 @@ fn get_farm_version() -> &'static str {
 #[tauri::command]
 async fn check_for_update() -> Option<String> {
     tauri::async_runtime::spawn_blocking(|| {
-        let url = "https://api.github.com/repos/kennydead/claude-agent-farm-dist/releases/latest";
+        let url = "https://api.github.com/repos/kennydead/flux/releases/latest";
         let resp = ureq::get(url)
             .set("User-Agent", "flux-app")
             .timeout(std::time::Duration::from_secs(8))
