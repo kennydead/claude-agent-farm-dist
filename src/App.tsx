@@ -64,7 +64,7 @@ export default function App() {
         </div>
       )}
       {state === "home"    && <HomeScreen isConfigured={isConfigured} onStart={() => setState(isConfigured ? "startup" : "setup")} />}
-      {state === "setup"   && <SetupFlow initialStep={initialStep} onComplete={() => { setIsConfigured(true); setState("home"); }} />}
+      {state === "setup"   && <SetupFlow initialStep={initialStep} onComplete={() => { setIsConfigured(true); setState("startup"); }} />}
       {state === "startup" && <StartupScreen onReady={() => setState("running")} onResetSetup={() => setState("setup")} />}
       {state === "running" && <RunningScreen onBack={() => setState("home")} />}
 
