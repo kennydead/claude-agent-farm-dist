@@ -20,18 +20,21 @@ async function isFarmRunning(): Promise<boolean> {
 export default function App() {
   const [state, setState] = useState<AppState>("loading");
   const [initialStep, setInitialStep] = useState<SetupStep>("license");
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
-    const unlisten = listen("reset-requested", async () => {
-      const confirmed = window.confirm(
-        "This will stop the farm, remove your license key, and sign out of Claude.\n\nContinue?"
-      );
-      if (!confirmed) return;
-      await invoke("reset_setup");
-      window.location.reload();
+    const unlisten = listen("reset-requested", () => {
+      setShowResetConfirm(true);
     });
     return () => { unlisten.then((f) => f()); };
   }, []);
+
+  async function doReset() {
+    setResetting(true);
+    await invoke("reset_setup");
+    window.location.reload();
+  }
 
   useEffect(() => {
     if (import.meta.env.DEV) { setState("setup"); return; }
@@ -39,23 +42,52 @@ export default function App() {
       if (await isFarmRunning()) { setState("running"); return; }
       const hasLicense = await invoke<boolean>("check_license");
       if (!hasLicense) { setState("setup"); return; }
-      // License exists — check if Claude is also authenticated
       const isAuth = await invoke<boolean>("check_claude_auth");
       if (isAuth) { setState("startup"); return; }
-      // License saved but not authenticated — skip license step only
       setInitialStep("docker");
       setState("setup");
     }
     init();
   }, []);
 
-  if (state === "loading") return (
-    <div className="app-loading">
-      <span className="app-loading-spinner" />
-    </div>
-  );
+  return (
+    <>
+      {state === "loading" && (
+        <div className="app-loading">
+          <span className="app-loading-spinner" />
+        </div>
+      )}
+      {state === "running"  && <RunningScreen onBack={() => setState("startup")} />}
+      {state === "startup"  && <StartupScreen onReady={() => setState("running")} onResetSetup={() => setState("setup")} />}
+      {state === "setup"    && <SetupFlow initialStep={initialStep} onComplete={() => setState("startup")} />}
 
-  if (state === "running") return <RunningScreen onBack={() => setState("startup")} />;
-  if (state === "startup") return <StartupScreen onReady={() => setState("running")} onResetSetup={() => setState("setup")} />;
-  return <SetupFlow initialStep={initialStep} onComplete={() => setState("startup")} />;
+      {showResetConfirm && (
+        <div className="reset-overlay">
+          <div className="reset-dialog">
+            <h2>Reset Setup?</h2>
+            <p>
+              This will stop the farm, remove your license key, and sign out of Claude.
+              You'll need to go through setup again.
+            </p>
+            <div className="reset-actions">
+              <button
+                className="reset-btn-cancel"
+                onClick={() => setShowResetConfirm(false)}
+                disabled={resetting}
+              >
+                Cancel
+              </button>
+              <button
+                className="reset-btn-confirm"
+                onClick={doReset}
+                disabled={resetting}
+              >
+                {resetting ? "Resetting…" : "Reset Everything"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 }
