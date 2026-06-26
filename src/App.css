@@ -101,3 +101,14 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.quit-spinner {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 4px auto 0;
+}

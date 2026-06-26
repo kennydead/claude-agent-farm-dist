@@ -93,26 +93,28 @@ export default function App() {
       {showQuitConfirm && (
         <div className="reset-overlay">
           <div className="reset-dialog">
-            <h2>Quit Flux?</h2>
-            <p>
-              This will stop the farm and all running agents before closing.
-            </p>
-            <div className="reset-actions">
-              <button
-                className="reset-btn-cancel"
-                onClick={() => setShowQuitConfirm(false)}
-                disabled={quitting}
-              >
-                Cancel
-              </button>
-              <button
-                className="reset-btn-confirm"
-                onClick={doQuit}
-                disabled={quitting}
-              >
-                {quitting ? "Stopping…" : "Quit"}
-              </button>
-            </div>
+            {quitting ? (
+              <>
+                <h2>Stopping Farm…</h2>
+                <p>Waiting for agents to shut down. This may take a moment.</p>
+                <div className="reset-actions">
+                  <span className="quit-spinner" />
+                </div>
+              </>
+            ) : (
+              <>
+                <h2>Quit Flux?</h2>
+                <p>This will stop the farm and all running agents before closing.</p>
+                <div className="reset-actions">
+                  <button className="reset-btn-cancel" onClick={() => setShowQuitConfirm(false)}>
+                    Cancel
+                  </button>
+                  <button className="reset-btn-confirm" onClick={doQuit}>
+                    Quit
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
