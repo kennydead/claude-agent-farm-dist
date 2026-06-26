@@ -71,7 +71,7 @@ export default function DockerScreen({ onReady }: Props) {
               </Button>
               <p className="screen-footnote">
                 This opens an Administrator prompt to install WSL.
-                Then <strong>restart your computer</strong> and reopen Flux.
+                When it finishes, <strong>restart your computer manually</strong>, then reopen Flux to continue.
               </p>
             </div>
           )}
