@@ -3,11 +3,12 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import SetupFlow from "./screens/SetupFlow";
 import { SetupStep } from "./screens/SetupFlow";
+import HomeScreen from "./screens/HomeScreen";
 import StartupScreen from "./screens/StartupScreen";
 import RunningScreen from "./screens/RunningScreen";
 import "./App.css";
 
-type AppState = "loading" | "setup" | "startup" | "running";
+type AppState = "loading" | "setup" | "home" | "startup" | "running";
 
 async function isFarmRunning(): Promise<boolean> {
   try {
@@ -29,7 +30,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const unlisten = listen("farm-stopped", () => setState("startup"));
+    const unlisten = listen("farm-stopped", () => setState("home"));
     return () => { unlisten.then((f) => f()); };
   }, []);
 
@@ -40,15 +41,15 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (import.meta.env.DEV) { setState("setup"); return; }
+    if (import.meta.env.DEV) { setState("home"); return; }
     async function init() {
       if (await isFarmRunning()) { setState("running"); return; }
       const hasLicense = await invoke<boolean>("check_license");
-      if (!hasLicense) { setState("setup"); return; }
+      if (!hasLicense) { setInitialStep("license"); setState("setup"); return; }
       const isAuth = await invoke<boolean>("check_claude_auth");
-      if (isAuth) { setState("startup"); return; }
-      setInitialStep("docker");
-      setState("setup");
+      if (!isAuth) { setInitialStep("docker"); setState("setup"); return; }
+      // Everything is configured — show home screen, let user decide when to start
+      setState("home");
     }
     init();
   }, []);
@@ -60,9 +61,10 @@ export default function App() {
           <span className="app-loading-spinner" />
         </div>
       )}
-      {state === "running"  && <RunningScreen onBack={() => setState("startup")} />}
-      {state === "startup"  && <StartupScreen onReady={() => setState("running")} onResetSetup={() => setState("setup")} />}
-      {state === "setup"    && <SetupFlow initialStep={initialStep} onComplete={() => setState("startup")} />}
+      {state === "home"    && <HomeScreen onStart={() => setState("startup")} />}
+      {state === "setup"   && <SetupFlow initialStep={initialStep} onComplete={() => setState("home")} />}
+      {state === "startup" && <StartupScreen onReady={() => setState("running")} onResetSetup={() => setState("setup")} />}
+      {state === "running" && <RunningScreen onBack={() => setState("home")} />}
 
       {showResetConfirm && (
         <div className="reset-overlay">
