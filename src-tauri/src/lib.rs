@@ -56,6 +56,33 @@ fn get_farm_dir() -> String {
     farm_dir().to_string_lossy().into_owned()
 }
 
+// Rust-side HTTP checks bypass webview CORS restrictions
+#[tauri::command]
+async fn check_farm_running() -> bool {
+    tauri::async_runtime::spawn_blocking(|| {
+        ureq::get("http://localhost:8090/health")
+            .timeout(std::time::Duration::from_secs(3))
+            .call()
+            .map(|r| r.status() == 200)
+            .unwrap_or(false)
+    })
+    .await
+    .unwrap_or(false)
+}
+
+#[tauri::command]
+async fn check_dashboard_health() -> bool {
+    tauri::async_runtime::spawn_blocking(|| {
+        ureq::get("http://localhost:8090/health")
+            .timeout(std::time::Duration::from_secs(3))
+            .call()
+            .map(|r| r.status() == 200)
+            .unwrap_or(false)
+    })
+    .await
+    .unwrap_or(false)
+}
+
 #[tauri::command]
 async fn check_claude_auth() -> bool {
     let docker = docker_bin();
@@ -376,6 +403,8 @@ pub fn run() {
             check_claude_auth,
             start_claude_auth,
             complete_claude_auth,
+            check_farm_running,
+            check_dashboard_health,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application")

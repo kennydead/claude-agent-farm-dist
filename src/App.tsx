@@ -10,10 +10,7 @@ type AppState = "loading" | "setup" | "startup" | "running";
 
 async function isFarmRunning(): Promise<boolean> {
   try {
-    const res = await fetch("http://localhost:5174", {
-      signal: AbortSignal.timeout(1500),
-    });
-    return res.ok;
+    return await invoke<boolean>("check_farm_running");
   } catch {
     return false;
   }

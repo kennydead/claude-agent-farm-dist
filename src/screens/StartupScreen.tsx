@@ -111,13 +111,13 @@ export default function StartupScreen({ onReady, onResetSetup }: Props) {
     }
   }
 
-  async function waitForDashboard(attempts = 40) {
+  async function waitForDashboard(attempts = 80) {
     for (let i = 0; i < attempts; i++) {
       try {
-        const res = await fetch("http://localhost:8090/health");
-        if (res.ok) return;
+        const ok = await invoke<boolean>("check_dashboard_health");
+        if (ok) return;
       } catch {}
-      await delay(1500);
+      await delay(2000);
     }
     throw new Error("Dashboard did not start in time. Check that Docker is running and try again.");
   }
