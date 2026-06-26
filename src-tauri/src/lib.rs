@@ -7,7 +7,8 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-const AGENT_IMAGE: &str = "ghcr.io/kennydead/claude-agent-farm/agent:latest";
+const FARM_VERSION: &str = "v0.1.0";
+const IMAGE_REGISTRY: &str = "ghcr.io/kennydead/claude-agent-farm";
 
 struct AuthSession {
     stdin: Option<std::process::ChildStdin>,
@@ -366,6 +367,28 @@ async fn confirm_quit(app: AppHandle) {
 }
 
 #[tauri::command]
+fn get_farm_version() -> &'static str {
+    FARM_VERSION
+}
+
+#[tauri::command]
+async fn check_for_update() -> Option<String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        let url = "https://api.github.com/repos/kennydead/claude-agent-farm-dist/releases/latest";
+        let resp = ureq::get(url)
+            .set("User-Agent", "flux-app")
+            .timeout(std::time::Duration::from_secs(8))
+            .call()
+            .ok()?;
+        let json: serde_json::Value = resp.into_json().ok()?;
+        let latest = json["tag_name"].as_str()?.to_string();
+        if latest != FARM_VERSION { Some(latest) } else { None }
+    })
+    .await
+    .unwrap_or(None)
+}
+
+#[tauri::command]
 fn get_autostart(app: AppHandle) -> bool {
     use tauri_plugin_autostart::ManagerExt;
     app.autolaunch().is_enabled().unwrap_or(false)
@@ -512,6 +535,8 @@ pub fn run() {
             get_autostart,
             set_autostart,
             confirm_quit,
+            get_farm_version,
+            check_for_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application")

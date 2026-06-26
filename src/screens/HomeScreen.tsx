@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import Button from "../components/Button";
 import appIcon from "../assets/app-icon.png";
 import "./HomeScreen.css";
@@ -17,10 +18,12 @@ const FEATURES = [
 
 export default function HomeScreen({ onStart }: Props) {
   const [autostart, setAutostart] = useState(false);
+  const [updateVersion, setUpdateVersion] = useState<string | null>(null);
 
   useEffect(() => {
     if (import.meta.env.DEV) return;
     invoke<boolean>("get_autostart").then(setAutostart).catch(() => {});
+    invoke<string | null>("check_for_update").then(setUpdateVersion).catch(() => {});
   }, []);
 
   function toggleAutostart(e: React.ChangeEvent<HTMLInputElement>) {
@@ -31,6 +34,23 @@ export default function HomeScreen({ onStart }: Props) {
 
   return (
     <div className="home">
+      {/* Update banner */}
+      {updateVersion && (
+        <div className="home-update-banner">
+          <span>Update available: {updateVersion}</span>
+          <a
+            className="home-update-link"
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              openUrl("https://github.com/kennydead/claude-agent-farm-dist/releases/latest").catch(() => {});
+            }}
+          >
+            Download →
+          </a>
+        </div>
+      )}
+
       {/* Hero */}
       <div className="home-hero">
         <div className="home-glow" />

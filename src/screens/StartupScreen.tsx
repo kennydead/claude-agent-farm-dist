@@ -24,11 +24,6 @@ const INITIAL_STEPS: Step[] = [
   { id: "ready",    label: "Ready",                      state: "pending" },
 ];
 
-const IMAGES = [
-  "ghcr.io/kennydead/claude-agent-farm/agent:latest",
-  "ghcr.io/kennydead/claude-agent-farm/dashboard-backend:latest",
-  "ghcr.io/kennydead/claude-agent-farm/dashboard-frontend:latest",
-];
 
 const AGENT_TAGS = ["claudeagentfarm-coder", "claudeagentfarm-reviewer", "claudeagentfarm-planner", "claudeagentfarm-auditor"];
 
@@ -53,6 +48,15 @@ export default function StartupScreen({ onReady, onResetSetup }: Props) {
     }
 
     try {
+      // Resolve pinned image tags from Rust constant
+      const version = await invoke<string>("get_farm_version");
+      const reg = "ghcr.io/kennydead/claude-agent-farm";
+      const images = [
+        `${reg}/agent:${version}`,
+        `${reg}/dashboard-backend:${version}`,
+        `${reg}/dashboard-frontend:${version}`,
+      ];
+
       // Verify Claude is authenticated before starting anything
       set("auth", "active");
       const isAuth = await invoke<boolean>("check_claude_auth");
@@ -70,13 +74,13 @@ export default function StartupScreen({ onReady, onResetSetup }: Props) {
 
       // Pull images + tag
       set("pull", "active");
-      for (const image of IMAGES) {
+      for (const image of images) {
         await invoke("run_command", { program: "docker", args: ["pull", image] });
       }
       for (const tag of AGENT_TAGS) {
         await invoke("run_command", {
           program: "docker",
-          args: ["tag", IMAGES[0], tag],
+          args: ["tag", images[0], tag],
         });
       }
       set("pull", "done");
