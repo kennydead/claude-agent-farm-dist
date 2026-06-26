@@ -53,6 +53,15 @@ fn python_bin() -> String {
             return path.to_string();
         }
     }
+    #[cfg(target_os = "windows")]
+    for cmd in &["python3", "python"] {
+        let ok = silent_command(cmd)
+            .arg("--version")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+        if ok { return cmd.to_string(); }
+    }
     "python3".to_string()
 }
 
