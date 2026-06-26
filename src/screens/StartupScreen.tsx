@@ -59,14 +59,16 @@ export default function StartupScreen({ onReady, onResetSetup }: Props) {
 
       // Verify Claude is authenticated before starting anything
       set("auth", "active");
-      let isAuth = false;
+      // Check Docker is actually running before trying Claude auth
       try {
-        isAuth = await invoke<boolean>("check_claude_auth");
+        await invoke("run_command", { program: "docker", args: ["info"] });
       } catch {
         set("auth", "error");
-        setError("Could not reach Docker. Make sure Docker Desktop is running and try again.");
+        setError("Docker is not running. Please start Docker Desktop and try again.");
         return;
       }
+
+      const isAuth = await invoke<boolean>("check_claude_auth");
       if (!isAuth) {
         set("auth", "error");
         setError("Claude account not authenticated. Please sign in again.");
