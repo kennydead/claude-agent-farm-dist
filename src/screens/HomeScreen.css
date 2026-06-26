@@ -8,15 +8,11 @@
   overflow: hidden;
 }
 
-/* Constrain all content to a readable max-width, centered */
-.home > *:not(.home-glow) {
+/* Constrain content to readable max-width, centered — footer stays full width */
+.home-hero,
+.home-features,
+.home-cta {
   width: 100%;
-  max-width: 360px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.home-hero {
   max-width: 360px;
   margin-left: auto;
   margin-right: auto;
@@ -170,7 +166,6 @@
 .home-version {
   font-size: 11px;
   color: var(--text-muted);
-  opacity: 0.5;
   font-variant-numeric: tabular-nums;
 }
 
@@ -184,17 +179,15 @@
   font-size: 11px;
   color: var(--text-muted);
   text-decoration: none;
-  opacity: 0.6;
-  transition: opacity 0.15s;
+  transition: color 0.15s;
 }
 
 .home-link:hover {
-  opacity: 1;
   color: var(--text);
 }
 
 .home-dot {
   font-size: 11px;
   color: var(--text-muted);
-  opacity: 0.3;
+  opacity: 0.4;
 }
