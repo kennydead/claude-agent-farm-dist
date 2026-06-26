@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import Button from "../components/Button";
 import appIcon from "../assets/app-icon.png";
 import "./HomeScreen.css";
@@ -14,6 +16,19 @@ const FEATURES = [
 ];
 
 export default function HomeScreen({ onStart }: Props) {
+  const [autostart, setAutostart] = useState(false);
+
+  useEffect(() => {
+    if (import.meta.env.DEV) return;
+    invoke<boolean>("get_autostart").then(setAutostart).catch(() => {});
+  }, []);
+
+  function toggleAutostart(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.checked;
+    setAutostart(val);
+    invoke("set_autostart", { enabled: val }).catch(() => setAutostart(!val));
+  }
+
   return (
     <div className="home">
       {/* Hero */}
@@ -47,6 +62,18 @@ export default function HomeScreen({ onStart }: Props) {
           Get Started
         </Button>
       </div>
+
+      {/* Auto-start toggle */}
+      {!import.meta.env.DEV && (
+        <label className="home-autostart">
+          <input
+            type="checkbox"
+            checked={autostart}
+            onChange={toggleAutostart}
+          />
+          Launch Flux at login
+        </label>
+      )}
 
       {/* Footer */}
       <footer className="home-footer">

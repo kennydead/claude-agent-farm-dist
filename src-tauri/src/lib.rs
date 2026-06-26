@@ -352,6 +352,20 @@ async fn reset_setup() -> Result<(), String> {
 }
 
 #[tauri::command]
+fn get_autostart(app: AppHandle) -> bool {
+    use tauri_plugin_autostart::ManagerExt;
+    app.autolaunch().is_enabled().unwrap_or(false)
+}
+
+#[tauri::command]
+fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), String> {
+    use tauri_plugin_autostart::ManagerExt;
+    let mgr = app.autolaunch();
+    if enabled { mgr.enable() } else { mgr.disable() }
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn run_detached(program: String, args: Vec<String>) -> Result<(), String> {
     let bin = if program == "python3" { python_bin() } else { program };
     std::process::Command::new(&bin)
@@ -368,6 +382,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .setup(|app| {
             let show  = MenuItem::with_id(app, "show",  "Show Flux",      true, None::<&str>)?;
             let stop  = MenuItem::with_id(app, "stop",  "Stop Farm",       true, None::<&str>)?;
@@ -411,19 +426,8 @@ pub fn run() {
                         }
                     }
                     "quit" => {
-                        let app = app.clone();
-                        tauri::async_runtime::spawn(async move {
-                            let farm = farm_dir();
-                            let compose_file = farm.join("docker-compose.yml")
-                                .to_string_lossy()
-                                .into_owned();
-                            let docker = docker_bin();
-                            let _ = std::process::Command::new(&docker)
-                                .args(["compose", "-f", &compose_file, "down"])
-                                .current_dir(&farm)
-                                .output();
-                            app.exit(0);
-                        });
+                        // Farm keeps running in Docker — just close the tray app
+                        app.exit(0);
                     }
                     _ => {}
                 })
@@ -466,6 +470,8 @@ pub fn run() {
             check_dashboard_health,
             stop_farm,
             reset_setup,
+            get_autostart,
+            set_autostart,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application")
