@@ -1,61 +1,185 @@
 .home {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 32px;
-  padding: 24px 0;
+  height: 100vh;
+  padding: 0 28px 20px;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
 }
 
-.home-logo {
+/* ── Hero ─────────────────────────────────────── */
+.home-hero {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  text-align: center;
+  padding-top: 48px;
+  position: relative;
+}
+
+.home-glow {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 320px;
+  height: 220px;
+  background: radial-gradient(ellipse at center, rgba(79, 142, 247, 0.18) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 .home-icon {
-  width: 80px;
-  height: 80px;
+  width: 72px;
+  height: 72px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 20px;
+  border: 1px solid rgba(79, 142, 247, 0.25);
+  border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 32px rgba(79, 142, 247, 0.12);
+  box-shadow: 0 0 0 1px rgba(79, 142, 247, 0.08), 0 12px 40px rgba(79, 142, 247, 0.15);
+  position: relative;
+  z-index: 1;
 }
 
 .home-title {
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 700;
-  letter-spacing: -1px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-end));
+  letter-spacing: -1.2px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-end) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin: 0;
+  margin: 14px 0 0;
 }
 
-.home-subtitle {
-  font-size: 13px;
+.home-tagline {
+  font-size: 12px;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 1.5px;
-  font-weight: 500;
-  margin: 0;
+  letter-spacing: 2px;
+  font-weight: 600;
+  margin: 4px 0 0;
 }
 
-.home-status {
+.home-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 16px 0 0;
+  max-width: 300px;
+}
+
+/* ── Divider ──────────────────────────────────── */
+.home-divider {
+  width: 100%;
+  height: 1px;
+  background: var(--border);
+  margin: 20px 0 0;
+  opacity: 0.5;
+}
+
+/* ── Features ─────────────────────────────────── */
+.home-features {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.home-feature {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: var(--text-muted);
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 14px;
   font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
 }
 
-.home-status-dot {
-  width: 8px;
-  height: 8px;
+.home-feature-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+/* ── CTA ──────────────────────────────────────── */
+.home-cta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.home-ready {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--success, #3ecf8e);
+  font-weight: 500;
+}
+
+.home-ready-dot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--success);
-  box-shadow: 0 0 6px var(--success);
+  background: var(--success, #3ecf8e);
+  box-shadow: 0 0 6px var(--success, #3ecf8e);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
+/* ── Footer ───────────────────────────────────── */
+.home-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.home-version {
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.home-link {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-decoration: none;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.home-link:hover {
+  opacity: 1;
+  color: var(--text);
+}
+
+.home-dot {
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.3;
 }
