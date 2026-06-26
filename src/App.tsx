@@ -27,6 +27,8 @@ export default function App() {
   const [stopping, setStopping] = useState(false);
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
   const [quitting, setQuitting] = useState(false);
+  const [showMigrateConfirm, setShowMigrateConfirm] = useState(false);
+  const [migrating, setMigrating] = useState(false);
 
   useEffect(() => {
     const unlisten = listen("reset-requested", () => setShowResetConfirm(true));
@@ -40,6 +42,11 @@ export default function App() {
 
   useEffect(() => {
     const unlisten = listen("quit-requested", () => setShowQuitConfirm(true));
+    return () => { unlisten.then((f) => f()); };
+  }, []);
+
+  useEffect(() => {
+    const unlisten = listen("migrate-requested", () => setShowMigrateConfirm(true));
     return () => { unlisten.then((f) => f()); };
   }, []);
 
@@ -59,6 +66,12 @@ export default function App() {
   async function doReset() {
     setResetting(true);
     await invoke("reset_setup");
+    window.location.reload();
+  }
+
+  async function doMigrate() {
+    setMigrating(true);
+    await invoke("soft_reset");
     window.location.reload();
   }
 
@@ -142,6 +155,35 @@ export default function App() {
                 disabled={stopping}
               >
                 {stopping ? "Stopping…" : "Stop Farm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showMigrateConfirm && (
+        <div className="reset-overlay">
+          <div className="reset-dialog">
+            <h2>Migrate from Terminal Setup?</h2>
+            <p>
+              This will stop any running farm containers and remove the old farm directory.
+              Your task history and AI credentials will be preserved.
+              Flux will guide you through setup again.
+            </p>
+            <div className="reset-actions">
+              <button
+                className="reset-btn-cancel"
+                onClick={() => setShowMigrateConfirm(false)}
+                disabled={migrating}
+              >
+                Cancel
+              </button>
+              <button
+                className="reset-btn-confirm"
+                onClick={doMigrate}
+                disabled={migrating}
+              >
+                {migrating ? "Migrating…" : "Migrate"}
               </button>
             </div>
           </div>

@@ -341,6 +341,29 @@ async fn stop_farm() -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn soft_reset() -> Result<(), String> {
+    let farm = farm_dir();
+    let docker = docker_bin();
+
+    // Stop running containers — preserve all volumes (credentials + database)
+    let compose_file = farm.join("docker-compose.yml").to_string_lossy().into_owned();
+    let _ = tauri::async_runtime::spawn_blocking({
+        let docker = docker.clone();
+        move || {
+            let _ = std::process::Command::new(&docker)
+                .args(["compose", "-f", &compose_file, "down"])
+                .env("PATH", augmented_path())
+                .output();
+        }
+    }).await;
+
+    // Remove farm directory so Flux re-extracts fresh on next start
+    let _ = std::fs::remove_dir_all(&farm);
+
+    Ok(())
+}
+
+#[tauri::command]
 async fn reset_setup() -> Result<(), String> {
     let farm = farm_dir();
     let docker = docker_bin();
@@ -441,11 +464,12 @@ pub fn run() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
-            let show  = MenuItem::with_id(app, "show",  "Show Flux",      true, None::<&str>)?;
-            let stop  = MenuItem::with_id(app, "stop",  "Stop Farm",       true, None::<&str>)?;
-            let reset = MenuItem::with_id(app, "reset", "Reset Setup…",    true, None::<&str>)?;
-            let quit  = MenuItem::with_id(app, "quit",  "Quit",            true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show, &stop, &reset, &quit])?;
+            let show    = MenuItem::with_id(app, "show",    "Show Flux",             true, None::<&str>)?;
+            let stop    = MenuItem::with_id(app, "stop",    "Stop Farm",              true, None::<&str>)?;
+            let migrate = MenuItem::with_id(app, "migrate", "Migrate from Terminal…", true, None::<&str>)?;
+            let reset   = MenuItem::with_id(app, "reset",   "Reset Setup…",           true, None::<&str>)?;
+            let quit    = MenuItem::with_id(app, "quit",    "Quit",                   true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show, &stop, &migrate, &reset, &quit])?;
 
             // macOS: monochrome template icon (OS adapts to menu bar colour)
             // Windows: use default coloured app icon
@@ -489,6 +513,18 @@ pub fn run() {
                             #[cfg(target_os = "macos")]
                             let _ = app.show();
                             let _ = w.emit("stop-requested", ());
+                        }
+                    }
+                    "migrate" => {
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.unminimize();
+                            let _ = w.set_always_on_top(true);
+                            let _ = w.show();
+                            let _ = w.set_focus();
+                            let _ = w.set_always_on_top(false);
+                            #[cfg(target_os = "macos")]
+                            let _ = app.show();
+                            let _ = w.emit("migrate-requested", ());
                         }
                     }
                     "reset" => {
@@ -552,6 +588,7 @@ pub fn run() {
             check_farm_running,
             check_dashboard_health,
             stop_farm,
+            soft_reset,
             reset_setup,
             get_autostart,
             set_autostart,
