@@ -213,6 +213,18 @@ fn check_license() -> bool {
     farm_dir().join("logs").join("license_key.txt").exists()
 }
 
+#[tauri::command]
+fn check_setup_complete() -> bool {
+    farm_dir().join("logs").join("setup_complete").exists()
+}
+
+#[tauri::command]
+fn mark_setup_complete() -> Result<(), String> {
+    let logs = farm_dir().join("logs");
+    std::fs::create_dir_all(&logs).map_err(|e| e.to_string())?;
+    std::fs::write(logs.join("setup_complete"), "1").map_err(|e| e.to_string())
+}
+
 const LICENSE_ENDPOINT: &str = "https://oywppqdqfcypawrthfox.supabase.co/functions/v1/validate-license";
 
 #[tauri::command]
@@ -386,7 +398,7 @@ async fn soft_reset() -> Result<(), String> {
         }
     }).await;
 
-    // Remove farm directory so Flux re-extracts fresh on next start
+    // Remove farm directory (clears setup_complete flag and old scripts)
     let _ = std::fs::remove_dir_all(&farm);
 
     Ok(())
@@ -610,6 +622,8 @@ pub fn run() {
             run_command,
             run_docker_compose,
             run_detached,
+            check_setup_complete,
+            mark_setup_complete,
             check_wsl_installed,
             install_wsl,
             check_docker_running,

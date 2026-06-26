@@ -83,10 +83,9 @@ export default function App() {
       if (await isFarmRunning()) { setState("running"); return; }
       const hasLicense = await invoke<boolean>("check_license");
       if (!hasLicense) { setState("home"); return; }
-      // License exists → go to home. StartupScreen verifies Docker + auth
-      // when the user clicks Get Started, so we don't misread a Docker-down
-      // state as "not authenticated" here.
-      setIsConfigured(true);
+      // Only mark as configured if setup was fully completed (including auth)
+      const setupDone = await invoke<boolean>("check_setup_complete");
+      if (setupDone) setIsConfigured(true);
       setState("home");
     }
     init();
@@ -100,7 +99,7 @@ export default function App() {
         </div>
       )}
       {state === "home"    && <HomeScreen isConfigured={isConfigured} onStart={() => setState(isConfigured ? "startup" : "setup")} />}
-      {state === "setup"   && <SetupFlow initialStep={initialStep} onComplete={() => { setIsConfigured(true); setState("startup"); }} />}
+      {state === "setup"   && <SetupFlow initialStep={initialStep} onComplete={() => { invoke("mark_setup_complete"); setIsConfigured(true); setState("startup"); }} />}
       {state === "startup" && <StartupScreen onReady={() => setState("running")} onResetSetup={() => setState("setup")} />}
       {state === "running" && <RunningScreen onBack={() => setState("home")} />}
 
