@@ -528,6 +528,7 @@ fn open_discuss_terminal(farm: &std::path::Path, project_id: &str) {
         "-e".into(), "DASHBOARD_URL=http://dashboard-backend:8090".into(),
         "-v".into(), "claudeagentfarm_claude-home:/home/agent".into(),
         "-v".into(), format!("{}:/planning-workspace", workspace.to_string_lossy()),
+        "-v".into(), format!("{}:/app/config.yml", farm.join("config.yml").to_string_lossy()),
     ];
     if !project_id.is_empty() {
         docker_args.push("-e".into());
