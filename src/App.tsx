@@ -25,6 +25,8 @@ export default function App() {
   const [resetting, setResetting] = useState(false);
   const [showStopConfirm, setShowStopConfirm] = useState(false);
   const [stopping, setStopping] = useState(false);
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
+  const [quitting, setQuitting] = useState(false);
 
   useEffect(() => {
     const unlisten = listen("reset-requested", () => setShowResetConfirm(true));
@@ -35,6 +37,16 @@ export default function App() {
     const unlisten = listen("stop-requested", () => setShowStopConfirm(true));
     return () => { unlisten.then((f) => f()); };
   }, []);
+
+  useEffect(() => {
+    const unlisten = listen("quit-requested", () => setShowQuitConfirm(true));
+    return () => { unlisten.then((f) => f()); };
+  }, []);
+
+  async function doQuit() {
+    setQuitting(true);
+    await invoke("confirm_quit");
+  }
 
   async function doStop() {
     setStopping(true);
@@ -77,6 +89,33 @@ export default function App() {
       {state === "setup"   && <SetupFlow initialStep={initialStep} onComplete={() => { setIsConfigured(true); setState("startup"); }} />}
       {state === "startup" && <StartupScreen onReady={() => setState("running")} onResetSetup={() => setState("setup")} />}
       {state === "running" && <RunningScreen onBack={() => setState("home")} />}
+
+      {showQuitConfirm && (
+        <div className="reset-overlay">
+          <div className="reset-dialog">
+            <h2>Quit Flux?</h2>
+            <p>
+              This will stop the farm and all running agents before closing.
+            </p>
+            <div className="reset-actions">
+              <button
+                className="reset-btn-cancel"
+                onClick={() => setShowQuitConfirm(false)}
+                disabled={quitting}
+              >
+                Cancel
+              </button>
+              <button
+                className="reset-btn-confirm"
+                onClick={doQuit}
+                disabled={quitting}
+              >
+                {quitting ? "Stopping…" : "Quit"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showStopConfirm && (
         <div className="reset-overlay">
