@@ -286,7 +286,16 @@ async fn extract_resources(app: AppHandle) -> Result<String, String> {
         std::fs::write(farm.join(".env"), "").map_err(|e| e.to_string())?;
     }
     if !farm.join("config.yml").exists() {
-        std::fs::write(farm.join("config.yml"), "").map_err(|e| e.to_string())?;
+        std::fs::write(farm.join("config.yml"), "\
+github:\n\
+  repo:\n\
+  base_branch: main\n\
+agent:\n\
+  workspace_dir: ./planning-workspace\n\
+dashboard:\n\
+  base_url: http://localhost:8090\n\
+  project_id:\n\
+").map_err(|e| e.to_string())?;
     }
 
     let resource_dir = app.path().resource_dir().map_err(|e| e.to_string())?;
@@ -357,6 +366,29 @@ async fn run_command(program: String, args: Vec<String>) -> Result<String, Strin
             .map_err(|e| format!("Failed to run {bin}: {e}"))?;
         if output.status.success() {
             Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+        } else {
+            Err(String::from_utf8_lossy(&output.stderr).into_owned())
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Returns true if a new image was downloaded, false if already up to date.
+#[tauri::command]
+async fn pull_image(image: String) -> Result<bool, String> {
+    let bin = docker_bin();
+    tauri::async_runtime::spawn_blocking(move || {
+        let output = silent_command(&bin)
+            .args(["pull", &image])
+            .env("PATH", augmented_path())
+            .output()
+            .map_err(|e| format!("Failed to pull {image}: {e}"))?;
+        if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let combined = format!("{stdout}{stderr}");
+            Ok(combined.contains("Downloaded newer image") || combined.contains("Pull complete"))
         } else {
             Err(String::from_utf8_lossy(&output.stderr).into_owned())
         }
@@ -732,6 +764,7 @@ pub fn run() {
             save_license_key,
             extract_resources,
             run_command,
+            pull_image,
             run_docker_compose,
             run_detached,
             start_host_bridge,

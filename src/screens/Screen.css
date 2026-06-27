@@ -364,6 +364,12 @@
   color: var(--text);
 }
 
+.step-note {
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 500;
+}
+
 .step-pending .step-label {
   color: var(--text-muted);
   font-weight: 400;

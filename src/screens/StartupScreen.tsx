@@ -12,6 +12,7 @@ interface Props {
 interface Step {
   id: string;
   label: string;
+  note?: string;
   state: "pending" | "active" | "done" | "error";
 }
 
@@ -32,8 +33,8 @@ export default function StartupScreen({ onReady, onResetSetup }: Props) {
   const [steps, setSteps] = useState<Step[]>(INITIAL_STEPS);
   const [error, setError] = useState("");
 
-  const set = (id: string, state: Step["state"]) =>
-    setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, state } : s)));
+  const set = (id: string, state: Step["state"], note?: string) =>
+    setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, state, ...(note !== undefined ? { note } : {}) } : s)));
 
   useEffect(() => { run(); }, []);
 
@@ -75,13 +76,15 @@ export default function StartupScreen({ onReady, onResetSetup }: Props) {
 
       // 3. Pull images + tag (must happen before auth check — auth uses the image)
       set("pull", "active");
+      let anyUpdated = false;
       for (const image of images) {
-        await invoke("run_command", { program: "docker", args: ["pull", image] });
+        const updated = await invoke<boolean>("pull_image", { image });
+        if (updated) anyUpdated = true;
       }
       for (const tag of AGENT_TAGS) {
         await invoke("run_command", { program: "docker", args: ["tag", images[0], tag] });
       }
-      set("pull", "done");
+      set("pull", "done", anyUpdated ? "updated to latest version" : undefined);
 
       // 4. Verify AI account auth (image is now available locally)
       set("auth", "active");
@@ -159,7 +162,10 @@ export default function StartupScreen({ onReady, onResetSetup }: Props) {
                   {step.state === "error"   && <span className="step-error-icon">✕</span>}
                   {step.state === "pending" && <span className="step-dot" />}
                 </div>
-                <span className="step-label">{step.label}</span>
+                <span className="step-label">
+                  {step.label}
+                  {step.note && <span className="step-note"> — {step.note}</span>}
+                </span>
               </div>
             ))}
           </div>
